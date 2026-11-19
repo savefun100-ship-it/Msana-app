@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="My Restaurant" />
+  <meta name="description" content="Restaurant owner dashboard — revenue, menu performance, cashier audit" />
+  <title>My Restaurant</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #141414;
+      --bg3: #1c1c1c;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0ede8;
+      --text2: #888880;
+      --text3: #555550;
+      --accent: #d4a853;
+      --accent2: #e8c87a;
+      --green: #4caf7d;
+      --red: #e05a4e;
+      --blue: #4a8fd4;
+      --amber: #e8a030;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px; overscroll-behavior: none; }
+    body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      padding: env(safe-area-inset-top, 16px) 20px 0;
+      padding-top: max(env(safe-area-inset-top), 16px);
+      background: var(--bg);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0 0;
+    }
+    .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); letter-spacing: -0.3px; }
+    .logo span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .notify-btn {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--bg3);
+      border: 0.5px solid var(--border); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative;
+    }
+    .notify-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; background: var(--red); border-radius: 50%; border: 1.5px solid var(--bg); }
+    .notify-btn svg { width: 16px; height: 16px; stroke: var(--text2); fill: none; }
+
+    /* Date tabs */
+    .date-tabs { display: flex; gap: 6px; padding: 14px 0 12px; overflow-x: auto; scrollbar-width: none; }
+    .date-tabs::-webkit-scrollbar { display: none; }
+    .dtab {
+      flex-shrink: 0; font-size: 13px; font-weight: 400; padding: 6px 16px;
+      border-radius: 20px; border: 0.5px solid var(--border); color: var(--text2);
+      background: transparent; cursor: pointer; transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .dtab.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 600; }
+
+    /* Scroll content */
+    .content { flex: 1; overflow-y: auto; padding: 0 20px; padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 80px); }
+
+    /* Branch selector */
+    .section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; margin-top: 24px; }
+    .branch-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btab {
+      font-size: 13px; padding: 5px 14px; border-radius: 20px;
+      border: 0.5px solid var(--border); color: var(--text2);
+      background: transparent; cursor: pointer; transition: all 0.2s;
+    }
+    .btab.active { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+
+    /* Metric cards */
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .metric {
+      background: var(--bg2); border-radius: var(--radius); border: 0.5px solid var(--border);
+      padding: 16px; position: relative; overflow: hidden;
+    }
+    .metric.full { grid-column: 1 / -1; }
+    .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+    .metric-label svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; }
+    .metric-value { font-size: 26px; font-weight: 300; color: var(--text); letter-spacing: -0.5px; font-family: 'DM Serif Display', serif; }
+    .metric-value.sm { font-size: 20px; }
+    .metric-change { font-size: 12px; margin-top: 5px; display: flex; align-items: center; gap: 3px; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .metric-accent-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--accent); border-radius: 0 2px 0 0; }
+
+    /* Revenue chart area */
+    .chart-card { background: var(--bg2); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 18px; margin-top: 10px; }
+    .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .chart-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .chart-total { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--accent); }
+    .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 100px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+    .bar {
+      width: 100%; border-radius: 4px 4px 0 0;
+      transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative; cursor: pointer;
+    }
+    .bar.bole { background: var(--accent); }
+    .bar.piazza { background: var(--blue); }
+    .bar.megenagna { background: var(--green); }
+    .bar-label { font-size: 10px; color: var(--text3); white-space: nowrap; }
+    .bar-val { font-size: 10px; color: var(--text2); }
+
+    /* Branch comparison */
+    .branch-list { margin-top: 10px; }
+    .branch-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: background 0.15s; }
+    .branch-item:active { background: var(--bg3); }
+    .branch-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .branch-info { flex: 1; }
+    .branch-name { font-size: 14px; color: var(--text); font-weight: 500; }
+    .branch-orders { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .branch-progress { flex: 1; max-width: 80px; }
+    .progress-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+    .branch-revenue { font-size: 14px; font-weight: 600; color: var(--text); min-width: 70px; text-align: right; }
+
+    /* Top items */
+    .items-list { margin-top: 10px; }
+    .item-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 0.5px solid var(--border);
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-num { font-size: 13px; color: var(--text3); min-width: 20px; font-family: 'DM Serif Display', serif; }
+    .item-name { flex: 1; font-size: 14px; color: var(--text); }
+    .item-bar-wrap { width: 60px; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+    .item-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+    .item-count { font-size: 13px; color: var(--text2); min-width: 30px; text-align: right; }
+    .item-revenue { font-size: 12px; color: var(--text3); min-width: 55px; text-align: right; }
+
+    /* Cashier audit */
+    .audit-list { margin-top: 10px; }
+    .audit-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: background 0.15s;
+    }
+    .audit-row:active { background: var(--bg3); }
+    .audit-row.flagged { border-color: rgba(224,90,78,0.3); background: rgba(224,90,78,0.05); }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .audit-info { flex: 1; }
+    .audit-name { font-size: 14px; color: var(--text); font-weight: 500; }
+    .audit-branch { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .audit-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .audit-voids { font-size: 13px; color: var(--text); font-weight: 600; }
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .badge-ok { background: rgba(76,175,125,0.15); color: var(--green); }
+    .badge-warn { background: rgba(232,160,48,0.15); color: var(--amber); }
+    .badge-alert { background: rgba(224,90,78,0.15); color: var(--red); }
+
+    /* Alert banner */
+    .alert-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(224,90,78,0.1); border: 0.5px solid rgba(224,90,78,0.25); border-radius: var(--radius-sm); margin-top: 10px; }
+    .alert-icon { width: 32px; height: 32px; background: rgba(224,90,78,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .alert-icon svg { width: 16px; height: 16px; stroke: var(--red); fill: none; }
+    .alert-text { flex: 1; }
+    .alert-title { font-size: 13px; font-weight: 600; color: var(--red); }
+    .alert-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: rgba(10,10,10,0.92); backdrop-filter: blur(16px);
+      border-top: 0.5px solid var(--border);
+      display: flex; padding: 10px 0; padding-bottom: max(env(safe-area-inset-bottom), 10px);
+      z-index: 100;
+    }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: opacity 0.15s; }
+    .nav-item:active { opacity: 0.6; }
+    .nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+    .nav-icon svg { width: 22px; height: 22px; stroke: var(--text3); fill: none; stroke-width: 1.5; transition: stroke 0.15s; }
+    .nav-item.active .nav-icon svg { stroke: var(--accent); }
+    .nav-label { font-size: 10px; color: var(--text3); transition: color 0.15s; }
+    .nav-item.active .nav-label { color: var(--accent); }
+
+    /* Animate in */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .metric, .chart-card, .branch-item, .audit-row, .alert-banner {
+      animation: fadeUp 0.4s ease both;
+    }
+    .metric:nth-child(1) { animation-delay: 0.05s; }
+    .metric:nth-child(2) { animation-delay: 0.1s; }
+    .metric:nth-child(3) { animation-delay: 0.15s; }
+    .metric:nth-child(4) { animation-delay: 0.2s; }
+    .metric:nth-child(5) { animation-delay: 0.25s; }
+
+    /* Section */
+    .section { margin-top: 0; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">Buna<span>.</span></div>
+    <div class="header-right">
+      <div class="notify-btn" onclick="showAlert()">
+        <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <div class="notify-dot"></div>
+      </div>
+    </div>
+  </div>
+  <div class="date-tabs">
+    <button class="dtab active" onclick="setDate(this,'today')">Today</button>
+    <button class="dtab" onclick="setDate(this,'week')">This week</button>
+    <button class="dtab" onclick="setDate(this,'month')">This month</button>
+    <button class="dtab" onclick="setDate(this,'year')">This year</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- Overview page -->
+  <div id="page-overview">
+    <div class="section-label">Branch</div>
+    <div class="branch-tabs">
+      <button class="btab active" onclick="setBranch(this,'all')">All branches</button>
+      <button class="btab" onclick="setBranch(this,'bole')">Bole</button>
+      <button class="btab" onclick="setBranch(this,'piazza')">Piazza</button>
+      <button class="btab" onclick="setBranch(this,'megenagna')">Megenagna</button>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Summary</div>
+    <div class="metrics">
+      <div class="metric full">
+        <div class="metric-label">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          Total revenue
+        </div>
+        <div class="metric-value" id="m-revenue">ETB 48,320</div>
+        <div class="metric-change up">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          +12% vs yesterday
+        </div>
+        <div class="metric-accent-bar" style="width: 68%;"></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Orders
+        </div>
+        <div class="metric-value sm" id="m-orders">214</div>
+        <div class="metric-change up">+8 today</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Avg value
+        </div>
+        <div class="metric-value sm" id="m-avg">ETB 226</div>
+        <div class="metric-change down">−3% today</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Revenue by branch</div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Daily breakdown</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:3px);">Last 7 days</div>
+        </div>
+        <div class="chart-total" id="chart-total">48,320</div>
+      </div>
+      <div class="bar-chart" id="bar-chart">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Branches</div>
+    <div class="branch-list">
+      <div class="branch-item" onclick="switchPage('revenue')">
+        <div class="branch-dot" style="background:var(--accent);"></div>
+        <div class="branch-info">
+          <div class="branch-name">Bole</div>
+          <div class="branch-orders">92 orders today</div>
+        </div>
+        <div class="branch-progress">
+          <div class="progress-track"><div class="progress-fill" style="width:100%; background:var(--accent);"></div></div>
+        </div>
+        <div class="branch-revenue">ETB 21,400</div>
+      </div>
+      <div class="branch-item" onclick="switchPage('revenue')">
+        <div class="branch-dot" style="background:var(--blue);"></div>
+        <div class="branch-info">
+          <div class="branch-name">Piazza</div>
+          <div class="branch-orders">76 orders today</div>
+        </div>
+        <div class="branch-progress">
+          <div class="progress-track"><div class="progress-fill" style="width:72%; background:var(--blue);"></div></div>
+        </div>
+        <div class="branch-revenue">ETB 15,420</div>
+      </div>
+      <div class="branch-item" onclick="switchPage('revenue')">
+        <div class="branch-dot" style="background:var(--green);"></div>
+        <div class="branch-info">
+          <div class="branch-name">Megenagna</div>
+          <div class="branch-orders">46 orders today</div>
+        </div>
+        <div class="branch-progress">
+          <div class="progress-track"><div class="progress-fill" style="width:54%; background:var(--green);"></div></div>
+        </div>
+        <div class="branch-revenue">ETB 11,500</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu page -->
+  <div id="page-menu" style="display:none;">
+    <div class="section-label" style="margin-top:8px;">Top selling items</div>
+    <div class="chart-card" style="margin-top:10px;">
+      <div style="font-size:12px; color:var(--text2); margin-bottom:14px;">214 total orders today across all branches</div>
+      <div class="items-list">
+        <div class="item-row">
+          <span class="item-num">1</span>
+          <span class="item-name">Tibs</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:100%;"></div></div>
+          <span class="item-count">84</span>
+          <span class="item-revenue">ETB 10,080</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num">2</span>
+          <span class="item-name">Kitfo</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:79%;"></div></div>
+          <span class="item-count">66</span>
+          <span class="item-revenue">ETB 9,240</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num">3</span>
+          <span class="item-name">Injera combo</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:61%;"></div></div>
+          <span class="item-count">51</span>
+          <span class="item-revenue">ETB 6,375</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num">4</span>
+          <span class="item-name">Shiro</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:44%;"></div></div>
+          <span class="item-count">37</span>
+          <span class="item-revenue">ETB 3,330</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num">5</span>
+          <span class="item-name">Tej (house)</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:30%;"></div></div>
+          <span class="item-count">25</span>
+          <span class="item-revenue">ETB 2,500</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num">6</span>
+          <span class="item-name">Firfir</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:19%;"></div></div>
+          <span class="item-count">16</span>
+          <span class="item-revenue">ETB 1,440</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num">7</span>
+          <span class="item-name">Buna (coffee)</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:12%;"></div></div>
+          <span class="item-count">10</span>
+          <span class="item-revenue">ETB 500</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Slowest items</div>
+    <div class="chart-card" style="margin-top:10px;">
+      <div style="font-size:12px; color:var(--text2); margin-bottom:14px;">Consider reviewing or promoting these</div>
+      <div class="items-list">
+        <div class="item-row">
+          <span class="item-num" style="color:var(--red);">↓</span>
+          <span class="item-name">Kategna</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:8%; background:var(--text3);"></div></div>
+          <span class="item-count" style="color:var(--text2);">7</span>
+          <span class="item-revenue">ETB 630</span>
+        </div>
+        <div class="item-row">
+          <span class="item-num" style="color:var(--red);">↓</span>
+          <span class="item-name">Chechebsa</span>
+          <div class="item-bar-wrap"><div class="item-fill" style="width:5%; background:var(--text3);"></div></div>
+          <span class="item-count" style="color:var(--text2);">4</span>
+          <span class="item-revenue">ETB 280</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue / audit page -->
+  <div id="page-revenue" style="display:none;">
+    <div class="alert-banner">
+      <div class="alert-icon">
+        <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="alert-text">
+        <div class="alert-title">Void alert — Bole branch</div>
+        <div class="alert-desc">Samuel G. has 4 voids today. Review required.</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Cashier audit — today</div>
+    <div class="audit-list">
+      <div class="audit-row">
+        <div class="avatar" style="background:rgba(74,143,212,0.15); color:var(--blue);">MT</div>
+        <div class="audit-info">
+          <div class="audit-name">Meron T.</div>
+          <div class="audit-branch">Bole branch</div>
+        </div>
+        <div class="audit-right">
+          <div class="audit-voids">1 void</div>
+          <span class="badge badge-ok">Normal</span>
+        </div>
+      </div>
+      <div class="audit-row flagged">
+        <div class="avatar" style="background:rgba(224,90,78,0.15); color:var(--red);">SG</div>
+        <div class="audit-info">
+          <div class="audit-name">Samuel G.</div>
+          <div class="audit-branch">Bole branch</div>
+        </div>
+        <div class="audit-right">
+          <div class="audit-voids" style="color:var(--red);">4 voids</div>
+          <span class="badge badge-alert">Flagged</span>
+        </div>
+      </div>
+      <div class="audit-row">
+        <div class="avatar" style="background:rgba(76,175,125,0.15); color:var(--green);">HA</div>
+        <div class="audit-info">
+          <div class="audit-name">Hiwot A.</div>
+          <div class="audit-branch">Piazza branch</div>
+        </div>
+        <div class="audit-right">
+          <div class="audit-voids">1 void</div>
+          <span class="badge badge-ok">Normal</span>
+        </div>
+      </div>
+      <div class="audit-row">
+        <div class="avatar" style="background:rgba(232,160,48,0.15); color:var(--amber);">DM</div>
+        <div class="audit-info">
+          <div class="audit-name">Dawit M.</div>
+          <div class="audit-branch">Megenagna branch</div>
+        </div>
+        <div class="audit-right">
+          <div class="audit-voids">1 void</div>
+          <span class="badge badge-ok">Normal</span>
+        </div>
+      </div>
+      <div class="audit-row">
+        <div class="avatar" style="background:rgba(74,143,212,0.15); color:var(--blue);">TB</div>
+        <div class="audit-info">
+          <div class="audit-name">Tigist B.</div>
+          <div class="audit-branch">Piazza branch</div>
+        </div>
+        <div class="audit-right">
+          <div class="audit-voids">0 voids</div>
+          <span class="badge badge-ok">Normal</span>
+        </div>
+      </div>
+      <div class="audit-row">
+        <div class="avatar" style="background:rgba(232,160,48,0.15); color:var(--amber);">AK</div>
+        <div class="audit-info">
+          <div class="audit-name">Abebe K.</div>
+          <div class="audit-branch">Megenagna branch</div>
+        </div>
+        <div class="audit-right">
+          <div class="audit-voids">2 voids</div>
+          <span class="badge badge-warn">Watch</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings page -->
+  <div id="page-settings" style="display:none;">
+    <div class="section-label" style="margin-top:8px;">Business</div>
+    <div class="chart-card" style="margin-top:10px;">
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">Restaurant name</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">Buna Restaurant</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--text3)" fill="none" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div style="border-top:0.5px solid var(--border); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">Branches</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">3 active locations</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--text3)" fill="none" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div style="border-top:0.5px solid var(--border); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">Currency</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">ETB — Ethiopian Birr</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--text3)" fill="none" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Alerts</div>
+    <div class="chart-card" style="margin-top:10px;">
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">Void threshold</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">Flag after 3 voids per cashier</div>
+          </div>
+          <div style="background:var(--accent); color:#0a0a0a; font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px;">3</div>
+        </div>
+        <div style="border-top:0.5px solid var(--border); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">Daily report</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">Summary at 10 PM</div>
+          </div>
+          <div style="width:36px; height:20px; background:var(--accent); border-radius:10px; position:relative; cursor:pointer;">
+            <div style="width:16px; height:16px; background:#0a0a0a; border-radius:50%; position:absolute; top:2px; right:2px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px;">Data</div>
+    <div class="chart-card" style="margin-top:10px;">
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">POS connection</div>
+            <div style="font-size:12px; color:var(--green); margin-top:2px;">● Square — connected</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--text3)" fill="none" stroke-width="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div style="border-top:0.5px solid var(--border); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:14px; color:var(--text); font-weight:500;">Export data</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">Download CSV report</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke="var(--text3)" fill="none" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <div class="nav-item active" id="nav-overview" onclick="switchPage('overview')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </div>
+    <span class="nav-label">Overview</span>
+  </div>
+  <div class="nav-item" id="nav-menu" onclick="switchPage('menu')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </div>
+    <span class="nav-label">Menu</span>
+  </div>
+  <div class="nav-item" id="nav-revenue" onclick="switchPage('revenue')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    </div>
+    <span class="nav-label">Staff</span>
+  </div>
+  <div class="nav-item" id="nav-settings" onclick="switchPage('settings')">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </div>
+    <span class="nav-label">Settings</span>
+  </div>
+</nav>
+
+<script>
+  // Bar chart data
+  const chartData = {
+    today: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Today'], bole:[14,16,18,15,19,22,21.4], piazza:[10,11,13,12,14,16,15.4], megenagna:[7,8,9,8,10,12,11.5] },
+    week: { labels: ['W1','W2','W3','W4','W5','W6','W7'], bole:[95,102,88,110,115,118,121], piazza:[70,75,68,80,85,88,92], megenagna:[50,55,48,60,65,68,70] },
+    month: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], bole:[380,410,390,440,460,480,500], piazza:[280,300,290,320,340,360,380], megenagna:[200,220,210,240,250,260,280] },
+    year: { labels: ['2020','2021','2022','2023','2024','2025','2026'], bole:[1800,2100,2400,2800,3200,3600,4200], piazza:[1200,1500,1800,2100,2400,2700,3200], megenagna:[800,1000,1200,1400,1600,1800,2200] }
+  };
+  const metricData = {
+    today: { revenue: 'ETB 48,320', orders: '214', avg: 'ETB 226' },
+    week: { revenue: 'ETB 318,500', orders: '1,428', avg: 'ETB 223' },
+    month: { revenue: 'ETB 1.24M', orders: '5,820', avg: 'ETB 213' },
+    year: { revenue: 'ETB 14.8M', orders: '68,400', avg: 'ETB 216' }
+  };
+
+  let currentDate = 'today';
+
+  function renderBars(period) {
+    const d = chartData[period];
+    const all = [...d.bole, ...d.piazza, ...d.megenagna];
+    const max = Math.max(...all);
+    const chart = document.getElementById('bar-chart');
+    chart.innerHTML = '';
+    for (let i = 0; i < d.labels.length; i++) {
+      const total = d.bole[i] + d.piazza[i] + d.megenagna[i];
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+      const hw = document.createElement('div');
+      hw.className = 'bar-wrap';
+      hw.style.flexDirection = 'column';
+      hw.style.gap = '1px';
+      ['megenagna','piazza','bole'].forEach(branch => {
+        const b = document.createElement('div');
+        b.className = 'bar ' + branch;
+        const pct = (d[branch][i] / max * 90);
+        b.style.height = pct + 'px';
+        hw.appendChild(b);
+      });
+      const lbl = document.createElement('div');
+      lbl.className = 'bar-label';
+      lbl.textContent = d.labels[i];
+      col.appendChild(hw);
+      col.appendChild(lbl);
+      chart.appendChild(col);
+    }
+    const m = metricData[period];
+    document.getElementById('m-revenue').textContent = m.revenue;
+    document.getElementById('m-orders').textContent = m.orders;
+    document.getElementById('m-avg').textContent = m.avg;
+  }
+
+  function setDate(el, period) {
+    document.querySelectorAll('.dtab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentDate = period;
+    renderBars(period);
+  }
+
+  function setBranch(el, branch) {
+    document.querySelectorAll('.btab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function switchPage(page) {
+    ['overview','menu','revenue','settings'].forEach(p => {
+      document.getElementById('page-' + p).style.display = p === page ? 'block' : 'none';
+      const nav = document.getElementById('nav-' + p);
+      if (nav) nav.classList.toggle('active', p === page);
+    });
+    document.querySelector('.content').scrollTop = 0;
+  }
+
+  function showAlert() {
+    switchPage('revenue');
+    document.getElementById('nav-revenue').classList.add('active');
+    document.getElementById('nav-overview').classList.remove('active');
+  }
+
+  renderBars('today');
+
+  // PWA service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
